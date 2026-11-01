@@ -155,7 +155,19 @@ else:
     conn.close()
     
     st_autorefresh(interval=10000, key="pill_clock_heartbeat")
-    current_time_str = datetime.now().strftime("%I:%M %p")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("<h3 style='font-size: 20px; color: #FFFFFF;'>⏰ Synchronize Your Clock:</h3>", unsafe_allow_html=True)
+    hour_offset = st.sidebar.slider(
+        "Adjust server time by hours to match your wall clock:",
+        min_value=-12, max_value=12, value=0, step=1, key="tz_slider"
+    )
+    from datetime import timedelta
+    shifted_time = datetime.now() + timedelta(hours=hour_offset)
+    current_time_str = shifted_time.strftime("%I:%M %p")
+    
+    st.markdown(f"<p style='color: #B0BEC5; font-size: 18px;'>Your Synchronized App Clock: <strong>{current_time_str}</strong></p>", unsafe_allow_html=True)
+
+    st.write(f"⏰ The Cloud Server's Current Time is: {current_time_str}")
     conn = sqlite3.connect("medicine.db")
     db_cursor = conn.cursor()
     db_cursor.execute("SELECT email FROM users WHERE id = ?", (current_uid,))
