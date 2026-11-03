@@ -1,7 +1,6 @@
 import streamlit as st
 import sqlite3
 from datetime import datetime
-from streamlit_autorefresh import st_autorefresh
 
 def init_db():
     conn = sqlite3.connect("medicine.db")
@@ -154,41 +153,43 @@ else:
     med_list = cursor.fetchall()
     conn.close()
     
-    st_autorefresh(interval=10000, key="pill_clock_heartbeat")
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("<h3 style='font-size: 20px; color: #FFFFFF;'>⏰ Synchronize Your Clock:</h3>", unsafe_allow_html=True)
-    minute_offset = st.sidebar.slider(
-        "Adjust server time by minutes to match your wall clock:",
-        min_value=-600, max_value=600, value=0, step=1, key="tz_slider"
-    )
-    from datetime import timedelta
-    shifted_time = datetime.now() + timedelta(minutes=minute_offset)
-    current_time_str = shifted_time.strftime("%I:%M %p")
-    
-    st.markdown(f"<p style='color: #B0BEC5; font-size: 18px;'>Your Synchronized App Clock: <strong>{current_time_str}</strong></p>", unsafe_allow_html=True)
-
-    st.write(f"⏰ The Cloud Server's Current Time is: {current_time_str}")
-    conn = sqlite3.connect("medicine.db")
-    db_cursor = conn.cursor()
-    db_cursor.execute("SELECT email FROM users WHERE id = ?", (current_uid,))
-    user_email_row = db_cursor.fetchone()
-    user_email = user_email_row[0] if user_email_row else ""
-    conn.close()
-    
-    for med in med_list:
-        m_name = med[0]
-        m_dose = med[1]
-        m_time = med[2]
+    @st.fragment(run_every=10) 
+    def run_live_alarm_engine(med_list, current_uid):
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("<h3 style='font-size: 20px; color: #FFFFFF;'>⏰ Synchronize Your Clock:</h3>", unsafe_allow_html=True)
+        minute_offset = st.sidebar.slider(
+            "Adjust server time by minutes to match your wall clock:",
+            min_value=-600, max_value=600, value=0, step=1, key="tz_slider"
+        )
+        from datetime import timedelta
+        shifted_time = datetime.now() + timedelta(minutes=minute_offset)
+        current_time_str = shifted_time.strftime("%I:%M %p")
         
-        if current_time_str.strip() == m_time.strip():
-            st.markdown(f"""
-                <div style='background-color: #E65100; padding: 20px; border: 3px solid #FF9800; border-radius: 8px; margin-bottom: 25px; text-align: center;'>
-                    <h2 style='color: white; margin: 0; font-size: 32px;'>🚨 ALARM TIME: {m_time} 🚨</h2>
-                    <p style='color: white; font-size: 24px; margin-top: 10px;'>It is time to take your <strong>{m_dose}</strong> of <strong>{m_name}</strong>!</p>
-                </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"<p style='color: #B0BEC5; font-size: 18px;'>Your Synchronized App Clock: <strong>{current_time_str}</strong></p>", unsafe_allow_html=True)
+
+        st.write(f"⏰ The Cloud Server's Current Time is: {current_time_str}")
+        conn = sqlite3.connect("medicine.db")
+        db_cursor = conn.cursor()
+        db_cursor.execute("SELECT email FROM users WHERE id = ?", (current_uid,))
+        user_email_row = db_cursor.fetchone()
+        user_email = user_email_row[0] if user_email_row else ""
+        conn.close()
+        
+        for med in med_list:
+            m_name = med[0]
+            m_dose = med[1]
+            m_time = med[2]
             
-            st.info(f"[Background Engine] Automated alert notification dispatched securely to: {user_email}")
+            if current_time_str.strip() == m_time.strip():
+                st.markdown(f"""
+                    <div style='background-color: #E65100; padding: 20px; border: 3px solid #FF9800; border-radius: 8px; margin-bottom: 25px; text-align: center;'>
+                        <h2 style='color: white; margin: 0; font-size: 32px;'>🚨 ALARM TIME: {m_time} 🚨</h2>
+                        <p style='color: white; font-size: 24px; margin-top: 10px;'>It is time to take your <strong>{m_dose}</strong> of <strong>{m_name}</strong>!</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                st.info(f"[Background Engine] Automated alert notification dispatched securely to: {user_email}")
+    run_live_alarm_engine(med_list, current_uid)
 
     st.markdown("<h3 style='font-size: 28px; color: #FFFFFF; margin-top: 30px;'>📋 Your Active Medicine Schedule:</h3>", unsafe_allow_html=True)
     
